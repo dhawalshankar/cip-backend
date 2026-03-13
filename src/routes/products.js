@@ -4,7 +4,22 @@ import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { logActivity } from '../lib/logger.js';
 
 const router = Router();
+// ===============================
+// ADDED: Google Drive URL normalizer
+// User koi bhi drive link dale → direct image link ban jayega
+// ===============================
+function normalizeDriveImage(url) {
+  if (!url) return url;
 
+  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/); // drive file id extract
+
+  if (match && match[1]) {
+    const id = match[1];
+    return `https://lh3.googleusercontent.com/d/${id}`;
+  }
+
+  return url;
+}
 // GET /products — public, no auth needed
 router.get('/', async (req, res) => {
   const { data, error } = await supabase
@@ -37,7 +52,10 @@ router.post('/', requireAuth, async (req, res) => {
       language:       language || 'Hindi',
       price:          Number(price),
       original_price: Number(original_price) || Number(price),
-      image:          image?.trim() || '',
+       // ===============================
+      // ADDED: Drive link automatically convert
+      // ===============================
+      image:          normalizeDriveImage(image?.trim()),
       description:    description?.trim() || '',
       isbn:           isbn?.trim() || null,
       pages:          pages ? Number(pages) : null,
@@ -60,44 +78,6 @@ router.post('/', requireAuth, async (req, res) => {
   });
 
   res.status(201).json({ product: data });
-});
-
-// POST /products/decrease-stock — internal use only (verify.js call karta hai)
-router.post('/decrease-stock', async (req, res) => {
-  const { secret, items } = req.body;
-
-  if (!secret || secret !== process.env.INTERNAL_SECRET)
-    return res.status(403).json({ message: 'Forbidden' });
-
-  if (!Array.isArray(items) || items.length === 0)
-    return res.status(400).json({ message: 'items required' });
-
-  try {
-    for (const item of items) {
-      const { data: product } = await supabase
-        .from('products')
-        .select('stock_quantity')
-        .eq('title', item.title)
-        .single();
-
-      if (!product) continue;
-
-      const newQty = Math.max(0, product.stock_quantity - item.qty);
-
-      await supabase
-        .from('products')
-        .update({
-          stock_quantity: newQty,
-          in_stock:       newQty > 0,
-          updated_at:     new Date().toISOString(),
-        })
-        .eq('title', item.title);
-    }
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Stock update error:', err);
-    res.status(500).json({ message: 'Stock update failed' });
-  }
 });
 
 // PATCH /products/:id/rating — user rating update
@@ -147,6 +127,12 @@ router.patch('/:id/rating', async (req, res) => {
 router.put('/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   const updates = { ...req.body };
+  // ===============================
+  // ADDED: image update me bhi drive convert
+  // ===============================
+  if (updates.image) {
+    updates.image = normalizeDriveImage(updates.image);
+  }
 
   if ('stock_quantity' in updates) {
     updates.in_stock = Number(updates.stock_quantity) > 0;
