@@ -17,6 +17,8 @@ const allowedOrigins = [
   'https://admin.cosmoindiaprakashan.in',
   'http://cosmoindiaprakashan.in',
   'https://cosmoindiaprakashan.in',
+  'http://www.cosmoindiaprakashan.in',      // ← add
+  'https://www.cosmoindiaprakashan.in',     // ← add
 ];
 
 const corsOptions = {
