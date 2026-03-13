@@ -19,7 +19,7 @@ const allowedOrigins = [
   'https://cosmoindiaprakashan.in',
 ];
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
@@ -28,7 +28,14 @@ app.use(cors({
     }
   },
   credentials: true,
-}));
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
+
+// ── Preflight for ALL routes ────────────────────────────────
+app.options('*', cors(corsOptions));
 
 app.use(express.json());
 
@@ -44,10 +51,18 @@ app.get('/health', (_, res) => res.json({ ok: true, timestamp: new Date().toISOS
 // ── 404 ────────────────────────────────────────────────────
 app.use((_, res) => res.status(404).json({ message: 'Route nahi mila' }));
 
-// ── Error handler ──────────────────────────────────────────
-app.use((err, _req, res, _next) => {
+// ── Error handler (CORS headers must be set here too) ──────
+app.use((err, req, res, _next) => {
   console.error(err);
-  res.status(500).json({ message: 'Server error' });
+
+  // Ensure CORS header is present even on 500 errors
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+
+  res.status(500).json({ message: err.message || 'Server error' });
 });
 
 app.listen(PORT, () => {
