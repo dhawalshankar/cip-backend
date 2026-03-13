@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-
 import authRoutes     from './routes/auth.js';
 import productRoutes  from './routes/products.js';
 import logRoutes      from './routes/logs.js';
@@ -10,11 +9,25 @@ import employeeRoutes from './routes/employees.js';
 const app  = express();
 const PORT = process.env.PORT || 4000;
 
-// ── Middleware ─────────────────────────────────────────────
+// ── CORS ───────────────────────────────────────────────────
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:4173',
+  'http://admin.cosmoindiaprakashan.in',
+  'https://admin.cosmoindiaprakashan.in',
+];
+
 app.use(cors({
-  origin:      process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS blocked: ${origin}`));
+    }
+  },
   credentials: true,
 }));
+
 app.use(express.json());
 
 // ── Routes ─────────────────────────────────────────────────
