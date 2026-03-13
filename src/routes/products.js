@@ -4,21 +4,19 @@ import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { logActivity } from '../lib/logger.js';
 
 const router = Router();
-router.use(requireAuth);
 
-// GET /products — sab products
+// GET /products — public, no auth needed
 router.get('/', async (req, res) => {
   const { data, error } = await supabase
     .from('products')
     .select('*')
     .order('created_at', { ascending: false });
-
   if (error) return res.status(500).json({ message: error.message });
   res.json({ products: data });
 });
 
 // POST /products — naya product add karo
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   const {
     title, author, category, language,
     price, original_price, image, description,
@@ -47,7 +45,6 @@ router.post('/', async (req, res) => {
       in_stock:       qty > 0,
       bestseller:     Boolean(bestseller),
       rating:         0,
-      review_count:   0,
     })
     .select()
     .single();
@@ -65,12 +62,92 @@ router.post('/', async (req, res) => {
   res.status(201).json({ product: data });
 });
 
+// POST /products/decrease-stock — internal use only (verify.js call karta hai)
+router.post('/decrease-stock', async (req, res) => {
+  const { secret, items } = req.body;
+
+  if (!secret || secret !== process.env.INTERNAL_SECRET)
+    return res.status(403).json({ message: 'Forbidden' });
+
+  if (!Array.isArray(items) || items.length === 0)
+    return res.status(400).json({ message: 'items required' });
+
+  try {
+    for (const item of items) {
+      const { data: product } = await supabase
+        .from('products')
+        .select('stock_quantity')
+        .eq('title', item.title)
+        .single();
+
+      if (!product) continue;
+
+      const newQty = Math.max(0, product.stock_quantity - item.qty);
+
+      await supabase
+        .from('products')
+        .update({
+          stock_quantity: newQty,
+          in_stock:       newQty > 0,
+          updated_at:     new Date().toISOString(),
+        })
+        .eq('title', item.title);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Stock update error:', err);
+    res.status(500).json({ message: 'Stock update failed' });
+  }
+});
+
+// PATCH /products/:id/rating — user rating update
+router.patch('/:id/rating', async (req, res) => {
+  const { id } = req.params;
+  const { rating } = req.body;
+
+  if (!rating || rating < 1 || rating > 5)
+    return res.status(400).json({ message: 'Rating 1-5 ke beech honi chahiye' });
+
+  // Pehle current rating fetch karo
+  const { data: product, error: fetchErr } = await supabase
+    .from('products')
+    .select('rating, rating_count')
+    .eq('id', id)
+    .single();
+
+  if (fetchErr || !product)
+    return res.status(404).json({ message: 'Product nahi mila' });
+
+  const currentCount = product.rating_count || 0;
+  const currentRating = product.rating || 0;
+
+  // Running average calculate karo
+  const newCount  = currentCount + 1;
+  const newRating = parseFloat(
+    ((currentRating * currentCount + rating) / newCount).toFixed(1)
+  );
+
+  const { data, error } = await supabase
+    .from('products')
+    .update({
+      rating:       newRating,
+      rating_count: newCount,
+      updated_at:   new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) return res.status(500).json({ message: error.message });
+
+  res.json({ product: data });
+});
+
 // PUT /products/:id — product update karo
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   const updates = { ...req.body };
 
-  // stock_quantity se in_stock auto-update
   if ('stock_quantity' in updates) {
     updates.in_stock = Number(updates.stock_quantity) > 0;
   }
@@ -97,7 +174,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /products/:id — sirf admin
-router.delete('/:id', requireAdmin, async (req, res) => {
+router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
   const { id } = req.params;
 
   const { data: existing } = await supabase
