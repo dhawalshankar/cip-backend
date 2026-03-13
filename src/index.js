@@ -15,6 +15,8 @@ const allowedOrigins = [
   'http://localhost:4173',
   'http://admin.cosmoindiaprakashan.in',
   'https://admin.cosmoindiaprakashan.in',
+  'http://cosmoindiaprakashan.in',
+  'https://cosmoindiaprakashan.in',
 ];
 
 app.use(cors({
