@@ -5,25 +5,24 @@ import authRoutes     from './routes/auth.js';
 import productRoutes  from './routes/products.js';
 import logRoutes      from './routes/logs.js';
 import employeeRoutes from './routes/employees.js';
+import profileRoutes from './routes/profile.js';
 
 const app  = express();
 const PORT = process.env.PORT || 4000;
 
 // ── CORS ───────────────────────────────────────────────────
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:4173',
-  'http://admin.cosmoindiaprakashan.in',
-  'https://admin.cosmoindiaprakashan.in',
-  'http://cosmoindiaprakashan.in',
-  'https://cosmoindiaprakashan.in',
-  'http://www.cosmoindiaprakashan.in',      // ← add
-  'https://www.cosmoindiaprakashan.in',     // ← add
-];
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  if (/^https?:\/\/([\w-]+\.)?cosmoindiaprakashan\.in$/.test(origin)) return true;
+  if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
+  if (/^https?:\/\/[\w-]+-cosmo-india\.vercel\.app$/.test(origin)) return true;  // ← add
+  if (origin === 'https://cosmo-india.vercel.app') return true;                   // ← add
+  return false;
+};
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (isAllowedOrigin(origin)) {
       callback(null, true);
     } else {
       callback(new Error(`CORS blocked: ${origin}`));
@@ -46,7 +45,7 @@ app.use('/auth',      authRoutes);
 app.use('/products',  productRoutes);
 app.use('/logs',      logRoutes);
 app.use('/employees', employeeRoutes);
-
+app.use('/profile', profileRoutes);
 // ── Health check ───────────────────────────────────────────
 app.get('/health', (_, res) => res.json({ ok: true, timestamp: new Date().toISOString() }));
 
@@ -56,14 +55,11 @@ app.use((_, res) => res.status(404).json({ message: 'Route nahi mila' }));
 // ── Error handler (CORS headers must be set here too) ──────
 app.use((err, req, res, _next) => {
   console.error(err);
-
-  // Ensure CORS header is present even on 500 errors
   const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
+  if (isAllowedOrigin(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
-
   res.status(500).json({ message: err.message || 'Server error' });
 });
 
