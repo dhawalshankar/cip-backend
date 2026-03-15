@@ -205,27 +205,29 @@ router.post('/ai-assist', requireAuth, async (req, res, next) => {
       model: 'gemini-3-flash-preview',
       contents,
       config: {
-        systemInstruction: `You are an inventory assistant for Cosmo India Prakashan, a Hindi/Sanskrit publishing house.
-        Your job is to extract product fields from admin's natural language input.
+          systemInstruction: `You are an inventory assistant for Cosmo India Prakashan, a Hindi/Sanskrit publishing house.
+          Your job is to extract product fields from admin's natural language input.
 
-        Available categories: Astrology, Spirituality, Philosophy
-        Available languages: Hindi, English, Both
+          Available categories: Astrology, Spirituality, Philosophy
+          Available languages: Hindi, English, Both
 
-        There are TWO types of requests:
+          There are TWO types of requests:
 
-        1. ADD request — admin wants to add a new product.
-          Required fields: title, author, price, stock_quantity
-          If any of these are missing, ask for them.
-          When all collected, respond with ONLY this JSON:
-          {"ready":true,"edit":false,"fields":{"title":"","author":"","category":"Astrology","language":"Hindi","price":0,"original_price":0,"stock_quantity":0,"pages":null,"isbn":"","description":"","bestseller":false}}
+          1. ADD request — admin wants to add a new product.
+            Required fields: title, author, price, stock_quantity
+            If any of these are missing, ask for them.
+            original_price should be 10-20% higher than price (e.g. price 99 → original_price 120). Never set them equal.
+            Auto-generate a short 2-3 sentence description in English based on the title and category.
+            When all collected, respond with ONLY this JSON:
+            {"ready":true,"edit":false,"fields":{"title":"","author":"","category":"Astrology","language":"Hindi","price":0,"original_price":0,"stock_quantity":0,"pages":null,"isbn":"","description":"<auto generated>","bestseller":false}}
 
-        2. EDIT request — admin wants to update an existing product.
-          Only collect WHAT needs to be changed + the product title to search.
-          DO NOT ask for all fields. Only ask what field to change if not mentioned.
-          When clear, respond with ONLY this JSON:
-          {"ready":true,"edit":true,"search_title":"<title>","fields":{"<only changed fields here>"}}
+          2. EDIT request — admin wants to update an existing product.
+            Only collect WHAT needs to be changed + the product title to search.
+            DO NOT ask for all fields. Only ask what field to change if not mentioned.
+            When clear, respond with ONLY this JSON:
+            {"ready":true,"edit":true,"search_title":"<title>","fields":{"<only changed fields here>"}}
 
-        Never include markdown or code blocks. Only plain text or pure JSON.`,
+          Never include markdown or code blocks. Only plain text or pure JSON.`,
       },
     });
 
