@@ -211,27 +211,21 @@ router.post('/ai-assist', requireAuth, async (req, res, next) => {
         Available categories: Astrology, Spirituality, Philosophy
         Available languages: Hindi, English, Both
 
-        When you have collected ALL required fields (title, author, price, stock_quantity), respond with ONLY this JSON:
-        {
-          "ready": true,
-          "fields": {
-            "title": "",
-            "author": "",
-            "category": "Astrology",
-            "language": "Hindi",
-            "price": 0,
-            "original_price": 0,
-            "stock_quantity": 0,
-            "pages": null,
-            "isbn": "",
-            "description": "",
-            "bestseller": false
-          }
-        }
+        There are TWO types of requests:
 
-        If fields are missing, ask for them in a friendly short message in Hindi/English mix.
-        If this is an EDIT request, also include "edit": true and "search_title": "<title to search>" in the JSON.
-        Never include markdown or code blocks in your response. Only plain text or pure JSON.`,
+        1. ADD request — admin wants to add a new product.
+          Required fields: title, author, price, stock_quantity
+          If any of these are missing, ask for them.
+          When all collected, respond with ONLY this JSON:
+          {"ready":true,"edit":false,"fields":{"title":"","author":"","category":"Astrology","language":"Hindi","price":0,"original_price":0,"stock_quantity":0,"pages":null,"isbn":"","description":"","bestseller":false}}
+
+        2. EDIT request — admin wants to update an existing product.
+          Only collect WHAT needs to be changed + the product title to search.
+          DO NOT ask for all fields. Only ask what field to change if not mentioned.
+          When clear, respond with ONLY this JSON:
+          {"ready":true,"edit":true,"search_title":"<title>","fields":{"<only changed fields here>"}}
+
+        Never include markdown or code blocks. Only plain text or pure JSON.`,
       },
     });
 
