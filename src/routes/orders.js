@@ -59,6 +59,7 @@ router.get('/', requireAuth, async (req, res) => {
 router.patch('/:id/status', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
+  const employeeName = req.user?.name || req.user?.email || 'Admin';
 
   if (!['dispatched', 'cancelled'].includes(status)) {
     return res.status(400).json({ message: 'Status sirf dispatched ya cancelled ho sakta hai' });
@@ -107,6 +108,21 @@ router.patch('/:id/status', requireAuth, async (req, res) => {
     user.orders[orderIndex].status = status;
     user.markModified('orders');
     await user.save();
+
+    // ── Activity log ───────────────────────────────────────
+    await supabase.from('activity_logs').insert({
+      admin_email: req.admin?.email || 'unknown',
+      admin_name:  req.admin?.name  || 'Admin',
+      action:      'UPDATE',
+      entity:      'order',
+      entity_id:   id,
+      changes: {
+        status_changed_to: status,
+        customer_name:     order.name  || user.name,
+        customer_email:    order.email || user.email,
+        amount:            order.amount,
+      },
+    });
 
     res.json({ message: `Order ${status} ho gaya ✅` });
   } catch (err) {
