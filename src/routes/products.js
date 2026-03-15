@@ -202,7 +202,7 @@ router.post('/ai-assist', requireAuth, async (req, res, next) => {
     ];
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-3-flash-preview',
       contents,
       config: {
         systemInstruction: `You are an inventory assistant for Cosmo India Prakashan, a Hindi/Sanskrit publishing house.
