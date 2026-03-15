@@ -2,7 +2,8 @@ import { Router } from 'express';
 import supabase from '../lib/supabase.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { logActivity } from '../lib/logger.js';
-
+import { GoogleGenAI } from '@google/genai';
+const ai = new GoogleGenAI({});
 const router = Router();
 
 function normalizeDriveImage(url) {
@@ -183,6 +184,66 @@ router.delete('/:id', requireAuth, requireAdmin, async (req, res, next) => {
     });
 
     res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /products/ai-assist — natural language se product fields extract karo
+router.post('/ai-assist', requireAuth, async (req, res, next) => {
+  try {
+    const { message, history = [] } = req.body;
+    if (!message) return res.status(400).json({ message: 'Message required hai' });
+
+    // conversation history build karo
+    const contents = [
+      ...history,
+      { role: 'user', parts: [{ text: message }] },
+    ];
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents,
+      config: {
+        systemInstruction: `You are an inventory assistant for Cosmo India Prakashan, a Hindi/Sanskrit publishing house.
+        Your job is to extract product fields from admin's natural language input.
+
+        Available categories: Astrology, Spirituality, Philosophy
+        Available languages: Hindi, English, Both
+
+        When you have collected ALL required fields (title, author, price, stock_quantity), respond with ONLY this JSON:
+        {
+          "ready": true,
+          "fields": {
+            "title": "",
+            "author": "",
+            "category": "Astrology",
+            "language": "Hindi",
+            "price": 0,
+            "original_price": 0,
+            "stock_quantity": 0,
+            "pages": null,
+            "isbn": "",
+            "description": "",
+            "bestseller": false
+          }
+        }
+
+        If fields are missing, ask for them in a friendly short message in Hindi/English mix.
+        If this is an EDIT request, also include "edit": true and "search_title": "<title to search>" in the JSON.
+        Never include markdown or code blocks in your response. Only plain text or pure JSON.`,
+      },
+    });
+
+    const text = response.text.trim();
+
+    // JSON hai ya plain message?
+    try {
+      const parsed = JSON.parse(text);
+      return res.json({ type: 'fields', data: parsed, history: [...contents, { role: 'model', parts: [{ text }] }] });
+    } catch {
+      return res.json({ type: 'message', data: text, history: [...contents, { role: 'model', parts: [{ text }] }] });
+    }
   } catch (err) {
     next(err);
   }
