@@ -2,7 +2,7 @@
 
 > Internal REST API for the Cosmo India Prakashan admin panel. Manages inventory, orders, employees, and activity logs.
 
-[![API](https://img.shields.io/badge/api-render-430098?style=flat-square)](https://cip-backend.onrender.com)
+[![API](https://img.shields.io/badge/api-render-430098?style=flat-square)](https://cip-backend-djaz.onrender.com)
 
 ---
 
