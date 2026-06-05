@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema({
   name:   String,
   email:  String,
   phone:  { type: String, default: '' },
-  orders: { type: Array, default: [] },
+  orders: { type: Array,  default: [] },
 }, { timestamps: true });
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);
@@ -38,7 +38,7 @@ router.get('/', requireAuth, async (req, res) => {
     const allOrders = users.flatMap(user =>
       (user.orders || []).map(order => ({
         ...order,
-        // "paid" → "pending" — buyer ko "paid" dikhta hai, admin ko "pending"
+        // "paid" → "pending" — buyer sees "paid", admin sees "pending"
         status: order.status === 'paid' ? 'pending' : order.status,
         name:   order.name  || user.name,
         email:  order.email || user.email,
@@ -50,8 +50,8 @@ router.get('/', requireAuth, async (req, res) => {
 
     res.json({ orders: allOrders });
   } catch (err) {
-    console.error('❌ Orders fetch error:', err);
-    res.status(500).json({ message: 'Orders nahi mile', detail: err.message });
+    console.error('GET /orders error:', err);
+    res.status(500).json({ message: 'Failed to fetch orders', detail: err.message });
   }
 });
 
@@ -59,58 +59,69 @@ router.get('/', requireAuth, async (req, res) => {
 router.patch('/:id/status', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
-  const employeeName = req.user?.name || req.user?.email || 'Admin';
 
-  if (!['dispatched', 'cancelled'].includes(status)) {
-    return res.status(400).json({ message: 'Status sirf dispatched ya cancelled ho sakta hai' });
-  }
+  if (!id)
+    return res.status(400).json({ message: 'Order ID is required' });
+
+  if (!['dispatched', 'cancelled'].includes(status))
+    return res.status(400).json({ message: 'Status must be either dispatched or cancelled' });
 
   try {
     await connectMongo();
 
     const user = await User.findOne({ 'orders.orderId': id });
-    if (!user) return res.status(404).json({ message: 'Order nahi mila' });
+    if (!user)
+      return res.status(404).json({ message: 'Order not found' });
 
     const orderIndex = user.orders.findIndex(o => o.orderId === id);
-    if (orderIndex === -1) return res.status(404).json({ message: 'Order nahi mila' });
+    if (orderIndex === -1)
+      return res.status(404).json({ message: 'Order not found' });
 
     const order = user.orders[orderIndex];
 
-    // ── Dispatch pe Supabase mein stock kam karo ───────────
+    // ── On dispatch — reduce stock in Supabase ─────────────
     if (status === 'dispatched') {
       const products = order.products || [];
 
       for (const item of products) {
         if (!item.id) continue;
 
-        // Current stock fetch karo
-        const { data: product } = await supabase
+        const { data: product, error: stockErr } = await supabase
           .from('products')
           .select('stock_quantity')
           .eq('id', item.id)
           .single();
 
+        if (stockErr) {
+          console.error(`Stock fetch error for product ${item.id}:`, stockErr.message);
+          continue;
+        }
+
         if (!product) continue;
 
         const newStock = Math.max(0, product.stock_quantity - (item.qty || 1));
 
-        await supabase
+        const { error: updateErr } = await supabase
           .from('products')
           .update({
             stock_quantity: newStock,
-            in_stock: newStock > 0,
+            in_stock:       newStock > 0,
           })
           .eq('id', item.id);
+
+        if (updateErr) {
+          console.error(`Stock update error for product ${item.id}:`, updateErr.message);
+        }
       }
     }
 
-    // ── MongoDB mein status update karo ───────────────────
+    // ── Update status in MongoDB ───────────────────────────
     user.orders[orderIndex].status = status;
     user.markModified('orders');
     await user.save();
 
     // ── Activity log ───────────────────────────────────────
-    await supabase.from('activity_logs').insert({
+    const { error: logErr } = await supabase.from('activity_logs').insert({
       admin_email: req.admin?.email || 'unknown',
       admin_name:  req.admin?.name  || 'Admin',
       action:      'UPDATE',
@@ -124,10 +135,14 @@ router.patch('/:id/status', requireAuth, async (req, res) => {
       },
     });
 
-    res.json({ message: `Order ${status} ho gaya ✅` });
+    if (logErr) {
+      console.error('Activity log insert error:', logErr.message);
+    }
+
+    res.json({ message: `Order marked as ${status} successfully` });
   } catch (err) {
-    console.error('❌ Order update error:', err);
-    res.status(500).json({ message: 'Update nahi hua', detail: err.message });
+    console.error('PATCH /orders/:id/status error:', err);
+    res.status(500).json({ message: 'Failed to update order status', detail: err.message });
   }
 });
 
