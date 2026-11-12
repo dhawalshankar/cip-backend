@@ -3,12 +3,19 @@
 > Internal REST API for the Cosmo India Prakashan admin panel. Manages inventory, orders, employees, and activity logs.
 
 [![API](https://img.shields.io/badge/api-render-430098?style=flat-square)](https://cip-backend-djaz.onrender.com)
+[![Runtime](https://img.shields.io/badge/runtime-Node.js%20%2B%20Express-339933?style=flat-square)](https://nodejs.org)
+[![Data](https://img.shields.io/badge/data-Supabase%20%2B%20MongoDB-3ecf8e?style=flat-square)](https://supabase.com)
 
 ---
 
 ## About
 
 This is the backend service powering the internal warehouse and inventory management system for Cosmo India Prakashan. It connects to two databases — Supabase for admin data and MongoDB for customer orders from the public website.
+
+It is the operational control plane between the public storefront and the
+internal admin console. The service centralizes authorization, inventory
+mutation, fulfillment state transitions, employee administration, profile
+management, and audit logging behind authenticated REST endpoints.
 
 ---
 
@@ -90,6 +97,10 @@ node index.js
 
 ## API Reference
 
+All protected requests use the bearer token returned by `/auth/login`. Admin
+authorization is enforced server-side; UI-only route guards in `cip-admin` are
+not treated as a security boundary.
+
 ### Auth
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
@@ -161,6 +172,11 @@ For each product in order:
   in_stock = false if stock hits 0
 ```
 
+Dispatch is deliberately transactional at the business-workflow level:
+customer order state is updated in MongoDB, inventory is decremented in
+Supabase, products are marked unavailable when exhausted, and the operation is
+recorded for auditability.
+
 ---
 
 ## Roles & Permissions
@@ -204,6 +220,23 @@ updates the MongoDB order status, decrements Supabase inventory, marks products
 out of stock when quantities reach zero, and records the administrative
 operation. This service therefore acts as the secure inventory, workforce,
 audit, and fulfillment layer rather than a second public storefront.
+
+### Request flow
+
+```text
+Customer
+   │
+   ▼
+cosmo-india storefront ──► Vercel serverless commerce APIs
+   │                                  │
+   │                                  └── MongoDB customer orders
+   │
+Operations team
+   │
+   ▼
+cip-admin ──► cip-backend ──► Supabase inventory/admin data
+                         └──► MongoDB order state
+```
 
 ---
 
