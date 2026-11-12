@@ -186,4 +186,25 @@ For each product in order:
 
 ---
 
+## Production ecosystem
+
+`cip-backend` is the internal operations control plane for the public Cosmo
+India Prakashan storefront. The public `cosmo-india` application runs on
+Vercel with serverless commerce APIs, while this Express service is deployed
+independently on Render for authenticated administrative operations.
+
+The ecosystem deliberately uses polyglot persistence:
+
+- Supabase PostgreSQL stores admin profiles, products, inventory, employees,
+  and structured activity logs.
+- MongoDB Atlas stores customer orders created by the public storefront.
+
+The order-management routes bridge these stores during fulfillment. Dispatch
+updates the MongoDB order status, decrements Supabase inventory, marks products
+out of stock when quantities reach zero, and records the administrative
+operation. This service therefore acts as the secure inventory, workforce,
+audit, and fulfillment layer rather than a second public storefront.
+
+---
+
 *Cosmo India Prakashan — Internal Use Only*
