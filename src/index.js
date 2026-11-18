@@ -7,6 +7,7 @@ import logRoutes      from './routes/logs.js';
 import employeeRoutes from './routes/employees.js';
 import profileRoutes  from './routes/profile.js';
 import orderRoutes    from './routes/orders.js';
+import categoryRoutes from './routes/categories.js';
 
 const app  = express();
 const PORT = process.env.PORT || 4000;
@@ -41,6 +42,7 @@ app.use(express.json());
 // ── Routes ─────────────────────────────────────────────────
 app.use('/auth',      authRoutes);
 app.use('/products',  productRoutes);
+app.use('/categories', categoryRoutes);
 app.use('/logs',      logRoutes);
 app.use('/employees', employeeRoutes);
 app.use('/profile',   profileRoutes);

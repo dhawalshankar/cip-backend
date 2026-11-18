@@ -242,7 +242,7 @@ router.post('/ai-assist', requireAuth, async (req, res, next) => {
         systemInstruction: `You are an inventory assistant for Cosmo India Prakashan, a Hindi/Sanskrit publishing house.
         Your job is to extract product fields from admin's natural language input.
 
-        Available categories: Astrology, Spirituality, Philosophy
+        Categories are user-defined. Use a category explicitly provided by the admin; otherwise default to Astrology.
         Available languages: Hindi, English, Both
 
         There are TWO types of requests:

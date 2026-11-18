@@ -9,6 +9,18 @@ CREATE TABLE admin_profiles (
 );
 
 -- 2. Products
+CREATE TABLE categories (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name       TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE UNIQUE INDEX idx_categories_name_ci ON categories (lower(name));
+
+INSERT INTO categories (name) VALUES
+  ('Astrology'), ('Spirituality'), ('Philosophy')
+ON CONFLICT DO NOTHING;
+
 CREATE TABLE products (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title          TEXT NOT NULL,
@@ -51,6 +63,7 @@ CREATE INDEX idx_logs_created_at   ON activity_logs(created_at DESC);
 ALTER TABLE admin_profiles DISABLE ROW LEVEL SECURITY;
 ALTER TABLE products       DISABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_logs  DISABLE ROW LEVEL SECURITY;
+ALTER TABLE categories     DISABLE ROW LEVEL SECURITY;
 ALTER TABLE products
   ADD COLUMN IF NOT EXISTS rating_count integer DEFAULT 0,
   DROP COLUMN IF EXISTS review_count;
