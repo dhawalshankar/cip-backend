@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
-router.use(requireAuth, requireAdmin);
+router.use(requireAuth);
 
 router.get('/', async (_req, res) => {
   try {
@@ -24,7 +24,7 @@ router.get('/', async (_req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
   if (!mongoose.isValidObjectId(id)) {
     return res.status(400).json({ message: 'Invalid customer ID' });
@@ -49,3 +49,4 @@ router.delete('/:id', async (req, res) => {
 });
 
 export default router;
+

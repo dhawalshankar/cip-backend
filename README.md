@@ -121,6 +121,12 @@ not treated as a security boundary.
 | GET | `/orders` | Bearer JWT | All orders from MongoDB |
 | PATCH | `/orders/:id/status` | Bearer JWT | Dispatch / Cancel + auto stock update |
 
+### Customers
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/customers` | Bearer JWT | List public website customer accounts |
+| DELETE | `/customers/:id` | Admin only | Permanently delete a customer account |
+
 ### Employees
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
