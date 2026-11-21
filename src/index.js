@@ -8,6 +8,7 @@ import employeeRoutes from './routes/employees.js';
 import profileRoutes  from './routes/profile.js';
 import orderRoutes    from './routes/orders.js';
 import categoryRoutes from './routes/categories.js';
+import customerRoutes  from './routes/customers.js';
 
 const app  = express();
 const PORT = process.env.PORT || 4000;
@@ -47,6 +48,7 @@ app.use('/logs',      logRoutes);
 app.use('/employees', employeeRoutes);
 app.use('/profile',   profileRoutes);
 app.use('/orders',    orderRoutes);
+app.use('/customers', customerRoutes);
 
 // ── Health check ───────────────────────────────────────────
 app.get('/health', (_, res) => res.json({ ok: true, timestamp: new Date().toISOString() }));
@@ -68,3 +70,4 @@ app.use((err, req, res, _next) => {
 app.listen(PORT, () => {
   console.log(`✅ CIP Admin backend: http://localhost:${PORT}`);
 });
+
