@@ -54,7 +54,7 @@ app.use('/customers', customerRoutes);
 app.get('/health', (_, res) => res.json({ ok: true, timestamp: new Date().toISOString() }));
 
 // ── 404 ────────────────────────────────────────────────────
-app.use((_, res) => res.status(404).json({ message: 'Route nahi mila' }));
+app.use((_, res) => res.status(404).json({ message: 'Route not found' }));
 
 // ── Error handler ──────────────────────────────────────────
 app.use((err, req, res, _next) => {

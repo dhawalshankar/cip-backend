@@ -236,11 +236,11 @@ router.post('/ai-assist', requireAuth, async (req, res, next) => {
     ];
 
     const response = await ai.models.generateContent({
-      model:    'gemini-3-flash-preview',
+      model:    'gemini-3.8-flash',
       contents,
       config: {
         systemInstruction: `You are an inventory assistant for Cosmo India Prakashan, a Hindi/Sanskrit publishing house.
-        Your job is to extract product fields from admin's natural language input.
+        Your job is to extract product fields from admin's natural language input. Write all conversational messages in clear English, regardless of the language used in the request.
 
         Categories are user-defined. Use a category explicitly provided by the admin; otherwise default to Astrology.
         Available languages: Hindi, English, Both
